@@ -2,7 +2,6 @@
 
 require '../../config/kon.php';
 require '../../vendor/autoload.php';
-require '../sidebar/index.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 // Load the existing spreadsheet
@@ -61,11 +60,6 @@ $jsonData = json_encode($data); // Existing data for the spreadsheet
 <body>
 
     <div class="container mt-4">
-        <div class="avatar-container text-center mb-4">
-            <img src="path/to/avatar.png" class="avatar rounded-circle" alt="Avatar" style="width: 100px; height: 100px;">
-            <!-- <h5 class="username"><?php echo htmlspecialchars($_SESSION['role']); ?></h5> -->
-        </div>
-
         <div class="main-content">
             <header class="mb-4">
                 <h1>Data Overview</h1>

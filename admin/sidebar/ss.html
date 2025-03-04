@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Entry</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
+    <style>
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            opacity: 0; /* Start as invisible */
+            transition: opacity 0.3s ease; /* Transition for fade effect */
+        }
+
+        .modal.show {
+            display: block; /* Show the modal */
+            opacity: 1; /* Fully visible */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        #providerList {
+            border: 1px solid #ccc;
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            z-index: 1000;
+            background-color: white;
+        }
+
+        .provider-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .provider-item:hover {
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container mt-4">
+        <!-- Button to open the modal -->
+        <button class="btn btn-success mb-4" id="openModalBtn" onclick="openModal()">Add New Entry</button>
+
+        <!-- Success Alert -->
+        <div id="successAlert" class="alert alert-success d-none" role="alert">
+            Entry submitted successfully!
+        </div>
+
+        <!-- Modal Structure -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Entry</h5>
+                    <button type="button" class="close" onclick="closeModal()">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="dataForm" action="../handler/submit.php" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" id="lhio_id" name="lhio_id" value="<?php echo htmlspecialchars($_SESSION['lhio_id']); ?>">
+
+                        <div class="form-group">
+                            <label for="provider">Name of Health Care Provider:</label>
+                            <input type="text" class="form-control" id="provider" name="provider" required autocomplete="off">
+                            <div id="providerList"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="pmcc">PMCC# (unique#):</label>
+                            <input type="text" class="form-control" id="pmcc" name="pmcc" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="upload">Type of Application:</label>
+                            <input type="text" class="form-control" id="upload" name="upload" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="file">Attach Files:</label>
+                            <input type="file" class="form-control-file" id="file" name="files[]" accept="*/*" multiple required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function openModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.add('show'); // Add the show class to trigger the transition
+            modal.style.display = 'block'; // Set display to block
+            setTimeout(() => {
+                modal.style.opacity = '1'; // Set opacity to 1 for fade-in effect
+            }, 10); // Delay to allow the display change to take effect
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.style.opacity = '0'; // Set opacity to 0 for fade-out effect
+            modal.classList.remove('show'); // Remove the show class
+            setTimeout(() => {
+                modal.style.display = 'none'; // Set display to none after the transition
+            }, 300); // Match the timeout with the CSS transition duration
+        }
+
+        // Close the modal when clicking outside of it
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('modal')) {
+                closeModal();
+            }
+        }
+
+        // Submission
+        document.getElementById('dataForm').onsubmit = function(event) {
+            event.preventDefault();
+
+            const newRow = {
+                lhio_id: document.getElementById('lhio_id').value,
+                provider: document.getElementById('provider').value,
+                pmcc: document.getElementById('pmcc').value,
+                application_type: document.getElementById('upload').value,
+                files: document.getElementById('file').files
+            };
+
+            // Create FormData object to handle file uploads
+            const formData = new FormData();
+            for (const key in newRow) {
+                if (key === 'files') {
+                    for (let i = 0; i < newRow[key].length; i++) {
+                        formData.append('files[]', newRow[key][i]);
+                    }
+                } else {
+                    formData.append(key, newRow[key]);
+                }
+            }
+
+            fetch('../handler/submit.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('successAlert').classList.remove('d-none'); // Show success alert
+                setTimeout(() => {
+                    document.getElementById('successAlert').classList.add('d-none'); // Hide alert after 3 seconds
+                }, 3000);
+                closeModal();
+                document.getElementById('dataForm').reset();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Search provider
+        $(document).ready(function() {
+            $('#provider').keyup(function() {
+                let query = $(this).val();
+                if (query != '') {
+                    $.ajax({
+                        url: "../handler/search_provider.php",
+                        method: "POST",
+                        data: {query: query},
+                        success: function(data) {
+                            $('#providerList').fadeIn();
+                            $('#providerList').html(data);
+                        }
+                    });
+                } else {
+                    $('#providerList').fadeOut();
+                }
+            });
+
+            $(document).on('click', '.provider-item', function() {
+                let providerName = $(this).data('name');
+                let pmccNo = $(this).data('pmcc');
+
+                $('#provider').val(providerName);
+                $('#pmcc').val(pmccNo);
+                $('#providerList').fadeOut();
+            });
+        });
+    </script>
+</body>
+
+</html>
